@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Application</title>
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+
+    <script type="module">
+        const serverUrl = 'http://localhost:3000';
+        let socket;
+        document.addEventListener('DOMContentLoaded', () => {
+        let token = localStorage.getItem('token');
+            if (!token) 
+            {
+                window.location.href = 'http://127.0.0.1:3001/client/src/login.html';
+            }
+            
+            socket = io(serverUrl, {
+                transports: ['websocket'],
+                auth: 
+                {
+                    token: token
+                }
+            });
+
+            socket.on('connect', () => {
+                console.log('Connected to server');
+                socket.on('message', (msg) => {
+                    console.log('Message received:', msg);
+                });
+                socket.emit('message', 'Hello, Server!');
+            });
+
+            socket.on('connect_error', (err) => {
+                console.error(`Connect error: ${err.message}`);
+                alert('Authentication failed');
+                localStorage.removeItem('token');
+                window.location.href = 'http://127.0.0.1:3001/client/src/login.html'; // Redirect to login page
+            });
+
+            // Send private message
+            document.getElementById('sendBtn').addEventListener('click', () => {
+                const recipient = document.getElementById('recipient').value;
+                const message = document.getElementById('message').value;
+                socket.emit('private_message', { recipient, message });
+            });
+
+            // Listen for private messages
+            socket.on('private_message', ({ sender, message }) => {
+                const messages = document.getElementById('messages');
+                const msgElement = document.createElement('li');
+                msgElement.textContent = `From ${sender}: ${message}`;
+                messages.appendChild(msgElement);
+            });
+
+            // Update the list of online users
+            socket.on('update_user_list', (users) => {
+                const userList = document.getElementById('users');
+                userList.innerHTML = '';
+                users.forEach((user) => {
+                    const userElement = document.createElement('li');
+                    userElement.textContent = user;
+                    userList.appendChild(userElement);
+                });
+            });
+        });
+    </script>
+</head>
+
+<body>
+    <h1>Chat Application</h1>
+    <ul id="messages"></ul>
+    <input id="recipient" type="text" placeholder="Recipient username">
+    <input id="message" type="text" placeholder="Your message">
+    <button id="sendBtn">Send</button>
+    <h2>Online Users</h2>
+    <ul id="users"></ul>
+</body>
+</html>
