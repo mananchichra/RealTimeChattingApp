@@ -154,7 +154,7 @@
                 if (!response.ok) {
                     throw new Error(data.message || 'Login failed');
                 }
-
+                localStorage.setItem('username', data.username);
                 localStorage.setItem('token', data.token);
                 window.location.href = 'privateMsg.html';  // Redirect to main application page
 

@@ -10,12 +10,13 @@
         const serverUrl = 'http://localhost:3000';
         let socket;
         document.addEventListener('DOMContentLoaded', () => {
-        let token = localStorage.getItem('token');
+            let username = localStorage.getItem('username');
+            let token = localStorage.getItem('token');
             if (!token) 
             {
                 window.location.href = 'http://127.0.0.1:3001/client/src/login.html';
             }
-            
+            document.getElementById('username').textContent = username;
             socket = io(serverUrl, {
                 transports: ['websocket'],
                 auth: 
@@ -70,6 +71,9 @@
 
 <body>
     <h1>Chat Application</h1>
+    <div id="user-info">
+        <p>Logged in as: <span id="username"></span></p>
+    </div>
     <ul id="messages"></ul>
     <input id="recipient" type="text" placeholder="Recipient username">
     <input id="message" type="text" placeholder="Your message">

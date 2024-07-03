@@ -79,23 +79,12 @@ const io = new Server(server, {
       if (err) {
         return next(new Error('Authentication error'));
       }
-      socket.username = decoded.username;
+      socket.username = decoded.user.username;
       next();
     });
   });
 
-  // io.on('connection', (socket) => {
-  //   console.log('A user connected:', socket.user);
-    
-  //   socket.on('disconnect', () => {
-  //     console.log('User disconnected');
-  //   });
   
-  //   socket.on('message', (msg) => {
-  //     console.log('Message received:', msg);
-  //     io.emit('message', msg); // Broadcast message to all clients
-  //   });
-  // });
   io.on('connection', (socket) => {
     console.log('New client connected');
     users[socket.username] = socket.id;
