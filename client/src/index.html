@@ -4,66 +4,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Socket.IO User Tracking</title>
+    <title>Chat Application</title>
 </head>
 <body>
-    <h1>Connected Users</h1>
-    <ul id="users"></ul>
-    <h2>Chat</h2>
-    <ul id="messages"></ul>
-    <input id="message" autocomplete="off" /><button onclick="sendMessage()">Send</button>
+    <h1>Chat Application</h1>
+    <div id="user-info">
+        <p>Logged in as: <span id="username"></span></p>
+    </div>
+    <div id="online-users">
+        <h2>Online Users</h2>
+        <ul id="user-list"></ul>
+    </div>
 
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
+        const serverUrl = 'http://localhost:3000';
+        let socket;
+        let token = localStorage.getItem('token');
 
-        // Prompt for username when the user connects
-        const username = prompt('Enter your username:');
-        socket.emit('set username', username);
+        document.addEventListener('DOMContentLoaded', () => {
+            const username = localStorage.getItem('username');
+            document.getElementById('username').textContent = username;
 
-        // Function to update the list of connected users
-        function updateUsers(users) {
-            const usersList = document.getElementById('users');
-            usersList.innerHTML = ''; // Clear the list
-            for (let id in users) {
-                const user = users[id];
-                const li = document.createElement('li');
-                li.textContent = user.name;
-                usersList.appendChild(li);
+            if (!token) {
+                window.location.href = 'http://127.0.0.1:3001/client/src/login.html';
+                return;
             }
-        }
 
-        // Listen for user connection and disconnection events
-        socket.on('user connected', (user) => {
-            console.log('User connected:', user);
-            socket.emit('request users');
+            socket = io(serverUrl, {
+                transports: ['websocket'],
+                auth: {
+                    token: token
+                }
+            });
+
+            socket.on('connect', () => {
+                console.log('Connected to server');
+            });
+
+            socket.on('connect_error', (err) => {
+                console.error(`Connect error: ${err.message}`);
+                alert('Authentication failed');
+                localStorage.removeItem('token');
+                window.location.href = 'http://127.0.0.1:3001/client/src/login.html';
+            });
+
+            socket.on('update_user_list', (users) => {
+                const userList = document.getElementById('user-list');
+                userList.innerHTML = '';
+
+                users.forEach(user => {
+                    if (user !== username) {
+                        const li = document.createElement('li');
+                        li.textContent = user;
+                        userList.appendChild(li);
+
+                        li.addEventListener('click', () => {
+                            // Redirect to private-chat.html with recipient information
+                            window.location.href = `http://127.0.0.1:3001/client/src/private-chat.html?recipient=${user}`;
+                        });
+                    }
+                });
+            });
         });
-
-        socket.on('user disconnected', (user) => {
-            console.log('User disconnected:', user);
-            socket.emit('request users');
-        });
-
-        socket.on('update users', (users) => {
-            updateUsers(users);
-        });
-
-        // Listen for chat messages
-        socket.on('chat message', (data) => {
-            const messagesList = document.getElementById('messages');
-            const li = document.createElement('li');
-            li.textContent = `${data.user.name}: ${data.message}`;
-            messagesList.appendChild(li);
-        });
-
-        // Send a chat message
-        function sendMessage() {
-            const input = document.getElementById('message');
-            socket.emit('chat message', input.value);
-            input.value = '';
-        }
-
-        socket.emit('request users');
     </script>
 </body>
 </html>

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Private Chat</title>
+</head>
+
+<body>
+    <h1>Private Chat with <span id="recipient"></span></h1>
+    <div id="chat-history">
+        <h2>Chat History</h2>
+        <ul id="message-list"></ul>
+    </div>
+    <div id="message-input">
+        <textarea id="message" placeholder="Type your message"></textarea>
+        <button id="sendBtn">Send</button>
+    </div>
+
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+    <script>
+        const serverUrl = 'http://localhost:3000';
+        let socket;
+        let token = localStorage.getItem('token');
+        let recipient = new URLSearchParams(window.location.search).get('recipient');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const username = localStorage.getItem('username');
+            document.getElementById('recipient').textContent = recipient;
+
+            if (!token || !username) {
+                window.location.href = 'http://127.0.0.1:3001/client/src/login.html';
+                return;
+            }
+
+            socket = io(serverUrl, {
+                transports: ['websocket'],
+                auth: {
+                    token: token
+                }
+            });
+
+            socket.on('connect', () => {
+                console.log('Connected to server');
+                fetchChatHistory(recipient);
+            });
+
+            socket.on('connect_error', (err) => {
+                console.error(`Connect error: ${err.message}`);
+                alert('Authentication failed');
+                localStorage.removeItem('token');
+                window.location.href = 'http://127.0.0.1:3001/client/src/login.html';
+            });
+
+            socket.on('private_message', ({ sender, message }) => {
+                displayMessage({ sender, message });
+            });
+
+            document.getElementById('sendBtn').addEventListener('click', sendMessage);
+        });
+
+        function fetchChatHistory(recipient) {
+            fetch(`${serverUrl}/api/chat-history/${recipient}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` // Include the token in the Authorization header
+                },
+                body: JSON.stringify({ recipient, message }) // Body content as JSON string
+            })
+                .then(response => response.json())
+                .then(data => {
+                    const messageList = document.getElementById('message-list');
+                    messageList.innerHTML = '';
+                    if (data.messages && Array.isArray(data.messages) && data.messages.length > 0) {
+                        data.messages.forEach(message => {
+                            displayMessage(message);
+                        });
+                    } else {
+                        const li = document.createElement('li');
+                        li.textContent = 'No messages';
+                        messageList.appendChild(li);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching chat history:', error);
+                });
+        }
+
+        function sendMessage() {
+            const message = document.getElementById('message').value.trim();
+            if (message) {
+                socket.emit('private_message', { recipient, message });
+                document.getElementById('message').value = '';
+            }
+        }
+
+        function displayMessage(message) {
+            const messageList = document.getElementById('message-list');
+            const li = document.createElement('li');
+            li.textContent = `${message.sender}: ${message.message}`;
+            messageList.appendChild(li);
+        }
+    </script>
+</body>
+
+</html>
