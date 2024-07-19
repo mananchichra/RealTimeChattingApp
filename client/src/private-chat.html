@@ -92,6 +92,7 @@
             const message = document.getElementById('message').value.trim();
             if (message) {
                 socket.emit('private_message', { recipient, message });
+                displayMessage({ sender: 'Me', message });
                 document.getElementById('message').value = '';
             }
         }

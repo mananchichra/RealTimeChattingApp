@@ -289,6 +289,10 @@ io.on('connection', (socket) => {
                     sender: socket.user.username,
                     message
                 });
+                io.to(users[sender]).emit('private_message', {
+                  sender: socket.user.username,
+                  message
+              });
             }
             
         } catch (err) {
